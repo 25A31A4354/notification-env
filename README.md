@@ -1,40 +1,69 @@
 # Smart Notification Manager AI
 
-## Problem
-Modern users are overwhelmed with notifications. This environment simulates how an AI agent can manage notifications intelligently based on user context.
+## 🚀 Overview
+This project simulates a real-world environment where an AI agent learns to manage notifications intelligently based on user context.
 
-## Objective
-Train an AI to decide whether to:
-- show notification
-- delay it
-- mute it
+In today's world, constant notifications reduce productivity and focus. This environment trains AI to prioritize notifications in a human-like, context-aware manner.
 
-## User States
-- studying
-- sleeping
-- free_time
+---
 
-## Notification Types
-- social
-- work
-- urgent
+## 🧠 Problem Statement
+Users receive various types of notifications (social, work, urgent), but not all should be treated equally.
 
-## Actions
-- show_now
-- delay
-- mute
+This environment helps an AI agent learn:
+- When to show a notification
+- When to delay it
+- When to mute it completely
 
-## Reward Logic
-- +10 → correct decision
-- +5 → partially correct
-- -5 → wrong decision
+---
 
-## Tasks
-- Easy: simple decisions
-- Medium: mixed scenarios
-- Hard: complex situations
+## ⚙️ Environment Design
 
-## How to Run
+### 👤 User States
+- Studying
+- Sleeping
+- Free Time
+
+### 🔔 Notification Types
+- Social (Instagram, WhatsApp)
+- Work (Emails, tasks)
+- Urgent (Calls, emergencies)
+
+### 🎯 Actions
+- `show_now`
+- `delay`
+- `mute`
+
+---
+
+## 🧪 Tasks
+
+- **Easy** → Clear decision-making scenarios  
+- **Medium** → Mixed notification priorities  
+- **Hard** → Complex real-world situations with ambiguity  
+
+---
+
+## 🎯 Reward Logic
+
+| Scenario | Correct Action | Reward |
+|---------|--------------|--------|
+| Studying + Social | Mute | +10 |
+| Studying + Work | Delay | +5 |
+| Urgent Notifications | Show Now | +10 |
+| Wrong Decision | Penalty | -5 |
+
+The reward system encourages focus preservation and correct prioritization.
+
+---
+
+## 📊 Evaluation
+
+The agent is evaluated using a scoring system between **0.0 and 1.0** based on total reward.
+
+---
+
+## ▶️ How to Run
 
 ```bash
 python3 inference.py
