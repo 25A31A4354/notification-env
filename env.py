@@ -15,6 +15,9 @@ class NotificationEnv:
         self.current_state = self._generate_state()
         return self.current_state
 
+    def state(self):
+        return self.current_state
+
     def _generate_state(self):
         return Observation(
             user_state=random.choice(USER_STATES),
@@ -27,25 +30,48 @@ class NotificationEnv:
 
         self.history.append(f"{self.current_state.notification_type}:{action}")
 
-        done = len(self.history) >= 5
+        done = len(self.history) >= 10
 
         self.current_state = self._generate_state()
 
         return self.current_state, reward, done, {}
 
     def _calculate_reward(self, state, action):
-        if state.user_state in ["studying", "sleeping"]:
-            if state.notification_type == "social" and action == "mute":
-                return 10
-            if state.notification_type == "work" and action == "delay":
-                return 5
-            if state.notification_type == "urgent" and action == "show_now":
-                return 10
+        reward = 0
+
+        if state.user_state == "studying":
+            if state.notification_type == "social":
+                if action == "mute":
+                    reward += 10
+                elif action == "delay":
+                    reward += 2
+                else:
+                    reward -= 10
+
+            elif state.notification_type == "work":
+                if action == "delay":
+                    reward += 6
+                elif action == "show_now":
+                    reward += 3
+                else:
+                    reward -= 5
+
+            elif state.notification_type == "urgent":
+                if action == "show_now":
+                    reward += 10
+                else:
+                    reward -= 8
+
+        elif state.user_state == "sleeping":
+            if action == "show_now":
+                reward -= 10
+            elif action == "mute":
+                reward += 5
 
         elif state.user_state == "free_time":
-            if state.notification_type == "social" and action == "show_now":
-                return 5
-            if state.notification_type == "urgent" and action == "show_now":
-                return 10
+            if action == "show_now":
+                reward += 5
+            elif action == "delay":
+                reward += 2
 
-        return -5
+        return reward

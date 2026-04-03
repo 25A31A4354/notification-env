@@ -7,7 +7,7 @@ class Observation(BaseModel):
     history: List[str]
 
 class Action(BaseModel):
-    action: str  # show_now, delay, mute
+    action: str
 
 class Reward(BaseModel):
     value: float

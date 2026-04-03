@@ -1,15 +1,15 @@
 name: notification-manager-env
-description: AI environment for managing notifications based on user context to maximize focus
+description: Context-aware notification management using reinforcement learning
 
-version: 0.1.0
+version: 0.2.0
 
 environment:
   entry_point: env:NotificationEnv
 
 tasks:
   - name: easy
-    description: Basic notification decisions with clear priorities
+    description: Simple notification decisions
   - name: medium
-    description: Mixed notifications with moderate difficulty
+    description: Mixed complexity decisions
   - name: hard
-    description: Complex scenarios with conflicting priorities
+    description: Complex real-world scenarios

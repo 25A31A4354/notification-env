@@ -1,10 +1,7 @@
 def grade(total_reward, max_possible_reward):
+    if max_possible_reward == 0:
+        return 0.0
+
     score = total_reward / max_possible_reward
 
-    # keep score between 0.0 and 1.0
-    if score < 0:
-        return 0.0
-    if score > 1:
-        return 1.0
-
-    return score
+    return max(0.0, min(1.0, score))
