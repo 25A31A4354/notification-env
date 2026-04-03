@@ -1,9 +1,7 @@
-import time
+import gradio as gr
 from env import NotificationEnv
 from grader import grade
 from tasks import TASKS
-
-ACTIONS = ["show_now", "delay", "mute"]
 
 def simple_agent(state):
     if state.notification_type == "urgent":
@@ -12,7 +10,9 @@ def simple_agent(state):
         return "mute"
     return "delay"
 
-def run_all():
+def run_env():
+    output = ""
+
     for task in TASKS:
         env = NotificationEnv()
         state = env.reset()
@@ -20,12 +20,12 @@ def run_all():
         total_reward = 0
         max_possible = task["steps"] * 10
 
-        print(f"[START] Task: {task['name']}")
+        output += f"\n[START] Task: {task['name']}\n"
 
         for step in range(task["steps"]):
             action = simple_agent(state)
 
-            print(f"[STEP] {step} | State: {state} | Action: {action}")
+            output += f"[STEP] {step} | State: {state} | Action: {action}\n"
 
             state, reward, done, _ = env.step(action)
             total_reward += reward
@@ -34,13 +34,16 @@ def run_all():
                 break
 
         score = grade(total_reward, max_possible)
+        output += f"[END] Score: {score}\n"
 
-        print(f"[END] Score: {score}\n")
+    return output
 
-def main():
-    while True:
-        run_all()
-        time.sleep(10)  # keeps app alive
+demo = gr.Interface(
+    fn=run_env,
+    inputs=[],
+    outputs="text",
+    title="Smart Notification Manager AI",
+    description="Run AI-based notification decision system"
+)
 
-if __name__ == "__main__":
-    main()
+demo.launch()
