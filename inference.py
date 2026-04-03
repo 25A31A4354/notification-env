@@ -1,77 +1,46 @@
-import os
+import time
 from env import NotificationEnv
 from grader import grade
 from tasks import TASKS
-from openai import OpenAI
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-API_KEY = os.getenv("OPENAI_API_KEY", "dummy")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+ACTIONS = ["show_now", "delay", "mute"]
 
-client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
+def simple_agent(state):
+    if state.notification_type == "urgent":
+        return "show_now"
+    if state.user_state == "studying":
+        return "mute"
+    return "delay"
 
-VALID_ACTIONS = ["show_now", "delay", "mute"]
+def run_all():
+    for task in TASKS:
+        env = NotificationEnv()
+        state = env.reset()
 
-def get_action_from_llm(state):
-    prompt = f"""
-User is {state.user_state}.
-Notification is {state.notification_type}.
+        total_reward = 0
+        max_possible = task["steps"] * 10
 
-Choose ONE action:
-show_now, delay, mute
+        print(f"[START] Task: {task['name']}")
 
-Only return one word.
-"""
+        for step in range(task["steps"]):
+            action = simple_agent(state)
 
-    try:
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0
-        )
+            print(f"[STEP] {step} | State: {state} | Action: {action}")
 
-        action = response.choices[0].message.content.strip().lower()
+            state, reward, done, _ = env.step(action)
+            total_reward += reward
 
-        if action not in VALID_ACTIONS:
-            return "delay"
+            if done:
+                break
 
-        return action
+        score = grade(total_reward, max_possible)
 
-    except:
-        return "delay"
-
-
-def run_task(task):
-    env = NotificationEnv()
-    state = env.reset()
-
-    total_reward = 0
-    max_possible = task["steps"] * 10
-
-    print(f"[START] Task: {task['name']}")
-
-    for step in range(task["steps"]):
-        action = get_action_from_llm(state)
-
-        print(f"[STEP] {step} | State: {state} | Action: {action}")
-
-        state, reward, done, _ = env.step(action)
-        total_reward += reward
-
-        if done:
-            break
-
-    score = grade(total_reward, max_possible)
-
-    print(f"[END] Score: {score}\n")
-
-    return total_reward, score
-
+        print(f"[END] Score: {score}\n")
 
 def main():
-    for task in TASKS:
-        run_task(task)
-
+    while True:
+        run_all()
+        time.sleep(10)  # keeps app alive
 
 if __name__ == "__main__":
     main()
