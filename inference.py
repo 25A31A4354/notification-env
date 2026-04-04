@@ -44,6 +44,7 @@ def simple_agent(state):
         )
         
         action = response.choices[0].message.content.strip().lower()
+        print("LLM RAW OUTPUT:", action)
         
         if "show" in action:
             return "show_now"
@@ -55,7 +56,7 @@ def simple_agent(state):
             return "delay"
         
     except Exception as e:
-        print(f"API Error: {e}")
+        print("LLM ERROR:", e)
         return "delay"
 
 def run_env():
