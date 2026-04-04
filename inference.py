@@ -45,14 +45,17 @@ def simple_agent(state):
         
         action = response.choices[0].message.content.strip().lower()
         
-        # Strip any accidental punctuation
-        action = "".join(c for c in action if c.isalpha() or c == "_")
+        if "show" in action:
+            return "show_now"
+        elif "mute" in action:
+            return "mute"
+        elif "delay" in action:
+            return "delay"
+        else:
+            return "delay"
         
-        if action in ["show_now", "delay", "mute"]:
-            return action
-        return "delay"
-        
-    except Exception:
+    except Exception as e:
+        print(f"API Error: {e}")
         return "delay"
 
 def run_env():
