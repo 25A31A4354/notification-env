@@ -1,60 +1,46 @@
 import os
+import requests
 import gradio as gr
-from openai import OpenAI
 from env import NotificationEnv
 from grader import grade
 from tasks import TASKS
 
 def simple_agent(state):
-    client_kwargs = {}
-    if os.environ.get("OPENAI_API_KEY"):
-        client_kwargs["api_key"] = os.environ.get("OPENAI_API_KEY")
-    if os.environ.get("API_BASE_URL"):
-        client_kwargs["base_url"] = os.environ.get("API_BASE_URL")
-        
     try:
-        client = OpenAI(**client_kwargs)
-        model_name = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
-        
-        system_prompt = (
-            "You are a smart notification manager. "
-            "Your output must be exactly one of the following words and nothing else: "
-            "show_now, delay, mute."
-        )
-        
-        user_prompt = (
-            "Decide the best action for the current notification based on these rules:\n"
-            "- Avoid disturbing the user during studying or sleeping.\n"
-            "- Prioritize urgent notifications.\n"
-            "- Consider the user's history of notifications.\n\n"
-            f"User State: {state.user_state}\n"
-            f"Notification Type: {state.notification_type}\n"
-            f"History: {state.history}\n\n"
-            "Action (show_now/delay/mute):"
-        )
-        
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+        url = os.getenv("API_BASE_URL") + "/chat/completions"
+
+        headers = {
+            "Authorization": "Bearer " + os.getenv("OPENAI_API_KEY"),
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": os.getenv("MODEL_NAME"),
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"You are an AI managing phone notifications.\n\nUser state: {state.user_state}\nNotification: {state.notification_type}\nHistory: {state.history}\n\nChoose ONLY ONE action:\nshow_now\ndelay\nmute\n\nRespond with only one word."
+                }
             ],
-            temperature=0.0,
-            max_tokens=10,
-        )
-        
-        action = response.choices[0].message.content.strip().lower()
-        print("LLM RAW OUTPUT:", action)
-        
-        if "show" in action:
+            "temperature": 0
+        }
+
+        response = requests.post(url, headers=headers, json=payload)
+
+        print("STATUS:", response.status_code)
+        print("RAW RESPONSE:", response.text)
+
+        raw = response.json()["choices"][0]["message"]["content"].lower()
+
+        if "show" in raw:
             return "show_now"
-        elif "mute" in action:
+        elif "mute" in raw:
             return "mute"
-        elif "delay" in action:
+        elif "delay" in raw:
             return "delay"
         else:
             return "delay"
-        
+
     except Exception as e:
         print("LLM ERROR:", e)
         return "delay"
