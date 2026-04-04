@@ -7,43 +7,44 @@ def simple_agent(state):
     user = state.user_state
     notif = state.notification_type
     history = state.history if hasattr(state, "history") and state.history else []
+    
+    last_actions = history[-2:]
 
-    if notif == "urgent":
-        return "show_now"
+    action = None
 
-    recent_same = len(history) >= 2 and history[-1] == history[-2]
-    last_action = history[-1] if history else None
-    delay_count = history.count("delay") if history else 0
-    many_delays = delay_count >= 3
+    if last_actions.count("delay") == 2:
+        action = "show_now"
+    elif last_actions.count("show_now") == 2:
+        action = "delay"
+    elif last_actions.count("mute") == 2:
+        action = "delay"
 
-    if user == "studying":
-        if notif == "social":
-            if recent_same and last_action == "mute":
-                return "delay"
-            return "mute"
-        if notif == "work":
-            if recent_same and last_action == "delay":
-                return "show_now"
-            return "delay"
-        return "delay"
+    if action is None:
+        if notif == "urgent":
+            if user == "sleeping":
+                action = "delay"
+            else:
+                action = "show_now"
+        elif user == "studying":
+            if notif == "social":
+                action = "mute"
+            elif notif == "work":
+                action = "delay"
+            elif notif == "urgent":
+                action = "show_now"
+            else:
+                action = "delay"
+        elif user == "sleeping":
+            action = "delay"
+        elif user == "free_time":
+            action = "show_now"
+        else:
+            action = "delay"
 
-    if user == "sleeping":
-        if recent_same and last_action == "delay":
-            return "show_now"
-        return "delay"
+    if notif == "urgent" and action == "mute":
+        action = "delay"
 
-    if user == "free_time":
-        return "show_now"
-
-    if many_delays:
-        return "show_now"
-
-    if recent_same and last_action == "delay":
-        return "show_now"
-    if recent_same and last_action == "mute":
-        return "delay"
-
-    return "delay"
+    return action
 
 def run_env():
     output = ""
