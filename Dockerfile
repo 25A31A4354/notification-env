@@ -6,4 +6,6 @@ COPY . .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python3", "inference.py"]
+EXPOSE 7860
+
+CMD ["python", "inference.py"]

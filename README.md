@@ -2,8 +2,9 @@
 title: Smart Notification Manager AI
 emoji: 🤖
 colorFrom: blue
-colorTo: green
-sdk: docker
+colorTo: purple
+sdk: gradio
+sdk_version: 6.11.0
 app_file: inference.py
 pinned: false
 ---
