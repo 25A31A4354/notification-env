@@ -1,49 +1,35 @@
-import os
-import requests
 import gradio as gr
 from env import NotificationEnv
 from grader import grade
 from tasks import TASKS
 
 def simple_agent(state):
-    try:
-        url = os.getenv("API_BASE_URL") + "/chat/completions"
+    user = state.user_state
+    notif = state.notification_type
+    history = state.history if hasattr(state, "history") and state.history else []
 
-        headers = {
-            "Authorization": "Bearer " + os.getenv("OPENAI_API_KEY"),
-            "Content-Type": "application/json"
-        }
+    recent_delays = len(history) >= 2 and all(a == "delay" for a in history[-2:])
 
-        payload = {
-            "model": os.getenv("MODEL_NAME"),
-            "messages": [
-                {
-                    "role": "user",
-                    "content": f"You are an AI managing phone notifications.\n\nUser state: {state.user_state}\nNotification: {state.notification_type}\nHistory: {state.history}\n\nChoose ONLY ONE action:\nshow_now\ndelay\nmute\n\nRespond with only one word."
-                }
-            ],
-            "temperature": 0
-        }
+    if notif == "urgent":
+        return "show_now"
 
-        response = requests.post(url, headers=headers, json=payload)
-
-        print("STATUS:", response.status_code)
-        print("RAW RESPONSE:", response.text)
-
-        raw = response.json()["choices"][0]["message"]["content"].lower()
-
-        if "show" in raw:
-            return "show_now"
-        elif "mute" in raw:
+    if user == "studying":
+        if notif == "social":
             return "mute"
-        elif "delay" in raw:
-            return "delay"
-        else:
-            return "delay"
-
-    except Exception as e:
-        print("LLM ERROR:", e)
+        if notif == "work":
+            return "show_now" if recent_delays else "delay"
         return "delay"
+
+    if user == "sleeping":
+        return "mute" if not recent_delays else "show_now"
+
+    if user == "free_time":
+        return "show_now"
+
+    if recent_delays:
+        return "show_now"
+
+    return "delay"
 
 def run_env():
     output = ""
