@@ -1,14 +1,59 @@
+import os
 import gradio as gr
+from openai import OpenAI
 from env import NotificationEnv
 from grader import grade
 from tasks import TASKS
 
 def simple_agent(state):
-    if state.notification_type == "urgent":
-        return "show_now"
-    if state.user_state == "studying":
-        return "mute"
-    return "delay"
+    client_kwargs = {}
+    if os.environ.get("OPENAI_API_KEY"):
+        client_kwargs["api_key"] = os.environ.get("OPENAI_API_KEY")
+    if os.environ.get("API_BASE_URL"):
+        client_kwargs["base_url"] = os.environ.get("API_BASE_URL")
+        
+    try:
+        client = OpenAI(**client_kwargs)
+        model_name = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
+        
+        system_prompt = (
+            "You are a smart notification manager. "
+            "Your output must be exactly one of the following words and nothing else: "
+            "show_now, delay, mute."
+        )
+        
+        user_prompt = (
+            "Decide the best action for the current notification based on these rules:\n"
+            "- Avoid disturbing the user during studying or sleeping.\n"
+            "- Prioritize urgent notifications.\n"
+            "- Consider the user's history of notifications.\n\n"
+            f"User State: {state.user_state}\n"
+            f"Notification Type: {state.notification_type}\n"
+            f"History: {state.history}\n\n"
+            "Action (show_now/delay/mute):"
+        )
+        
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.0,
+            max_tokens=10,
+        )
+        
+        action = response.choices[0].message.content.strip().lower()
+        
+        # Strip any accidental punctuation
+        action = "".join(c for c in action if c.isalpha() or c == "_")
+        
+        if action in ["show_now", "delay", "mute"]:
+            return action
+        return "delay"
+        
+    except Exception:
+        return "delay"
 
 def run_env():
     output = ""
