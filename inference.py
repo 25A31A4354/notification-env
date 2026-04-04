@@ -8,26 +8,40 @@ def simple_agent(state):
     notif = state.notification_type
     history = state.history if hasattr(state, "history") and state.history else []
 
-    recent_delays = len(history) >= 2 and all(a == "delay" for a in history[-2:])
-
     if notif == "urgent":
         return "show_now"
 
+    recent_same = len(history) >= 2 and history[-1] == history[-2]
+    last_action = history[-1] if history else None
+    delay_count = history.count("delay") if history else 0
+    many_delays = delay_count >= 3
+
     if user == "studying":
         if notif == "social":
+            if recent_same and last_action == "mute":
+                return "delay"
             return "mute"
         if notif == "work":
-            return "show_now" if recent_delays else "delay"
+            if recent_same and last_action == "delay":
+                return "show_now"
+            return "delay"
         return "delay"
 
     if user == "sleeping":
-        return "mute" if not recent_delays else "show_now"
+        if recent_same and last_action == "delay":
+            return "show_now"
+        return "delay"
 
     if user == "free_time":
         return "show_now"
 
-    if recent_delays:
+    if many_delays:
         return "show_now"
+
+    if recent_same and last_action == "delay":
+        return "show_now"
+    if recent_same and last_action == "mute":
+        return "delay"
 
     return "delay"
 
