@@ -1,34 +1,60 @@
+import os
 import gradio as gr
 from env import NotificationEnv
 from grader import grade
 from tasks import TASKS
+from openai import OpenAI
 
-def simple_agent(state):
-    user = state.user_state
-    notif = state.notification_type
+API_BASE_URL = os.getenv("API_BASE_URL")
+API_KEY = os.getenv("HF_TOKEN") or os.getenv("OPENAI_API_KEY")
+MODEL_NAME = os.getenv("MODEL_NAME")
 
-    # ── 1. USER STATE RULES ──
-    if user == "studying":
-        if notif == "social":
-            action = "mute"
-        elif notif == "work":
-            action = "delay"
-        elif notif == "urgent":
-            action = "show_now"
-        else:
-            action = "delay"
-    elif user == "sleeping":
-        action = "delay"
-    elif user == "free_time":
-        action = "show_now"
-    else:
-        action = "delay"
+client = OpenAI(
+    base_url=API_BASE_URL,
+    api_key=API_KEY
+)
 
-    # ── 2. SAFETY RULES ──
-    if notif == "urgent" and action == "mute":
-        action = "delay"
-    if user == "studying" and notif == "social" and action == "show_now":
-        action = "mute"
+def decide_action(state):
+    history = state.history if hasattr(state, "history") and state.history else []
+    
+    prompt = f"""
+You are an intelligent notification manager.
+
+User State: {state.user_state}
+Notification Type: {state.notification_type}
+Recent History: {history}
+
+Rules:
+
+* If user is studying or sleeping:
+
+  * social → mute
+  * work → delay
+  * urgent → show_now
+
+* If user is free_time:
+
+  * social → show_now
+  * urgent → show_now
+  * work → show_now
+
+Return ONLY one word:
+show_now OR delay OR mute
+"""
+
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": "You are a strict decision-making AI."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0
+    )
+
+    action = response.choices[0].message.content.strip().lower()
+
+    if action not in ["show_now", "delay", "mute"]:
+        return "delay"
 
     return action
 
@@ -45,7 +71,10 @@ def run_env():
         output += f"\n[START] Task: {task['name']}\n"
 
         for step in range(task["steps"]):
-            action = simple_agent(state)
+            try:
+                action = decide_action(state)
+            except Exception:
+                action = "delay"
 
             output += f"[STEP] {step} | State: {state} | Action: {action}\n"
 
