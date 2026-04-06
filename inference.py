@@ -8,8 +8,13 @@ def simple_agent(state):
     notif = state.notification_type
     history = state.history if hasattr(state, "history") and state.history else []
 
-    # ── 1. CORE DECISION RULES (highest priority) ──
-    if user == "studying":
+    # ── 1. SAFETY RULES (highest priority — checked first AND last) ──
+    # These constraints are absolute and cannot be violated.
+
+    # ── 2. USER STATE LOGIC ──
+    if user == "free_time":
+        action = "show_now"
+    elif user == "studying":
         if notif == "social":
             action = "mute"
         elif notif == "work":
@@ -19,31 +24,28 @@ def simple_agent(state):
         else:
             action = "delay"
     elif user == "sleeping":
-        if notif == "urgent":
-            action = "delay"
-        else:
-            action = "delay"
-    elif user == "free_time":
-        action = "show_now"
+        action = "delay"  # ALL notifications delayed while sleeping
     else:
-        # fallback for any unknown user state
-        if notif == "urgent":
-            action = "show_now"
+        action = "delay"  # safe fallback
+
+    # ── 3. URGENT OVERRIDE (smart) ──
+    if notif == "urgent":
+        if user == "sleeping":
+            action = "delay"
         else:
-            action = "delay"
-
-    # ── 2. HISTORY ADJUSTMENT (low priority) ──
-    # Only apply if last 3 actions are identical.
-    # NEVER override urgent decisions or studying rules.
-    last_actions = history[-3:]
-    if len(last_actions) == 3 and user != "studying" and notif != "urgent":
-        if last_actions.count("delay") == 3:
             action = "show_now"
-        elif last_actions.count("show_now") == 3:
-            action = "delay"
 
-    # ── 3. SAFETY RULES ──
-    # Never mute urgent notifications
+    # ── 4. HISTORY ADJUSTMENT (lowest priority) ──
+    # Only for non-critical situations to avoid spam/stagnation penalties.
+    last_actions = history[-2:]
+    if len(last_actions) == 2 and user != "studying" and notif != "urgent":
+        if last_actions.count("show_now") == 2:
+            action = "delay"    # avoid spam penalty
+        elif last_actions.count("delay") == 2:
+            action = "show_now"  # avoid stagnation
+
+    # ── SAFETY ENFORCEMENT (final guardrails) ──
+    # Never mute urgent
     if notif == "urgent" and action == "mute":
         action = "delay"
     # Never show social during studying
