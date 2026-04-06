@@ -77,41 +77,24 @@ def rule_based_action(state):
     user = state.user_state
     notif = state.notification_type
 
-    # Count recent action patterns
-    recent_actions = [str(h).split(":")[-1] if ":" in str(h) else str(h) for h in recent]
-    delay_streak = sum(1 for a in recent_actions[-2:] if a == "delay")
-    show_streak = sum(1 for a in recent_actions[-2:] if a == "show_now")
+    # ── PRIORITY 1: URGENT — always show (no exceptions) ──
+    if notif == "urgent":
+        return "show_now"
 
-    # ── PRIORITY 1: SLEEPING ──
+    # ── PRIORITY 2: SLEEPING — delay everything non-urgent ──
     if user == "sleeping":
-        if notif == "urgent":
-            return "show_now"  # emergencies override sleep
         return "delay"
 
-    # ── PRIORITY 2: STUDYING — protect focus ──
+    # ── PRIORITY 3: STUDYING — protect focus ──
     if user == "studying":
         if notif == "social":
             return "mute"
-        elif notif == "urgent":
-            return "show_now"
         elif notif == "work":
             return "delay"
         return "delay"
 
-    # ── PRIORITY 3: FREE TIME — show everything ──
+    # ── PRIORITY 4: FREE TIME — show everything ──
     if user == "free_time":
-        # Break show_now streaks to avoid spam penalty
-        if show_streak >= 2:
-            return "delay"
-        return "show_now"
-
-    # ── PRIORITY 4: URGENT fallback (unknown states) ──
-    if notif == "urgent":
-        return "show_now"
-
-    # ── PRIORITY 5: HISTORY-BASED ADJUSTMENT ──
-    # Break delay streaks to avoid stagnation penalty
-    if delay_streak >= 2 and notif != "social":
         return "show_now"
 
     return "delay"
