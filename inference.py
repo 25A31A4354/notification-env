@@ -7,42 +7,48 @@ def simple_agent(state):
     user = state.user_state
     notif = state.notification_type
     history = state.history if hasattr(state, "history") and state.history else []
-    
-    last_actions = history[-2:]
 
-    action = None
-
-    if last_actions.count("delay") == 2:
-        action = "show_now"
-    elif last_actions.count("show_now") == 2:
-        action = "delay"
-    elif last_actions.count("mute") == 2:
-        action = "delay"
-
-    if action is None:
-        if notif == "urgent":
-            if user == "sleeping":
-                action = "delay"
-            else:
-                action = "show_now"
-        elif user == "studying":
-            if notif == "social":
-                action = "mute"
-            elif notif == "work":
-                action = "delay"
-            elif notif == "urgent":
-                action = "show_now"
-            else:
-                action = "delay"
-        elif user == "sleeping":
+    # ── 1. CORE DECISION RULES (highest priority) ──
+    if user == "studying":
+        if notif == "social":
+            action = "mute"
+        elif notif == "work":
             action = "delay"
-        elif user == "free_time":
+        elif notif == "urgent":
+            action = "show_now"
+        else:
+            action = "delay"
+    elif user == "sleeping":
+        if notif == "urgent":
+            action = "delay"
+        else:
+            action = "delay"
+    elif user == "free_time":
+        action = "show_now"
+    else:
+        # fallback for any unknown user state
+        if notif == "urgent":
             action = "show_now"
         else:
             action = "delay"
 
+    # ── 2. HISTORY ADJUSTMENT (low priority) ──
+    # Only apply if last 3 actions are identical.
+    # NEVER override urgent decisions or studying rules.
+    last_actions = history[-3:]
+    if len(last_actions) == 3 and user != "studying" and notif != "urgent":
+        if last_actions.count("delay") == 3:
+            action = "show_now"
+        elif last_actions.count("show_now") == 3:
+            action = "delay"
+
+    # ── 3. SAFETY RULES ──
+    # Never mute urgent notifications
     if notif == "urgent" and action == "mute":
         action = "delay"
+    # Never show social during studying
+    if user == "studying" and notif == "social" and action == "show_now":
+        action = "mute"
 
     return action
 
