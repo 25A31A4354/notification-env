@@ -76,23 +76,28 @@ def rule_based_action(state):
     user = state.user_state
     notif = state.notification_type
 
-    # ── PRIORITY 1: SLEEPING — always delay (protect sleep, even for urgent) ──
-    if user == "sleeping":
-        return "delay"
+    # Reward table from env.py:
+    # SLEEPING:   show_now=-10, mute=+5, delay=0
+    # FREE_TIME:  show_now=+5, delay=+2, mute=0
+    # STUDYING:
+    #   social:   mute=+10, delay=+2, show_now=-10
+    #   work:     delay=+6, show_now=+3, mute=-5
+    #   urgent:   show_now=+10, else=-8
 
-    # ── PRIORITY 2: STUDYING — protect focus ──
+    if user == "sleeping":
+        return "mute"          # +5 always (best for sleeping)
+
     if user == "studying":
         if notif == "social":
-            return "mute"
-        elif notif == "urgent":
-            return "show_now"
+            return "mute"      # +10
         elif notif == "work":
-            return "delay"
+            return "delay"     # +6
+        elif notif == "urgent":
+            return "show_now"  # +10
         return "delay"
 
-    # ── PRIORITY 3: FREE TIME — always show ──
     if user == "free_time":
-        return "show_now"
+        return "show_now"      # +5 always
 
     return "delay"
 
