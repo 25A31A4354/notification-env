@@ -74,37 +74,43 @@ show_now OR delay OR mute
 
 def rule_based_action(state):
     recent = state.history if hasattr(state, "history") and state.history else []
+    user = state.user_state
+    notif = state.notification_type
 
-    # Count patterns
-    urgent_count = sum(1 for h in recent if "urgent:show_now" in str(h))
-    social_count = sum(1 for h in recent if "social:show_now" in str(h))
+    # Count recent action patterns
+    recent_actions = [str(h).split(":")[-1] if ":" in str(h) else str(h) for h in recent]
+    delay_streak = sum(1 for a in recent_actions[-3:] if a == "delay")
+    show_streak = sum(1 for a in recent_actions[-3:] if a == "show_now")
 
-    # PRIORITY 1: URGENT ALWAYS IMPORTANT
-    if state.notification_type == "urgent":
+    # ── PRIORITY 1: SLEEPING — always delay (protect sleep) ──
+    if user == "sleeping":
+        return "delay"
+
+    # ── PRIORITY 2: STUDYING — protect focus ──
+    if user == "studying":
+        if notif == "social":
+            return "mute"
+        elif notif == "urgent":
+            return "show_now"
+        elif notif == "work":
+            return "delay"
+        return "delay"
+
+    # ── PRIORITY 3: FREE TIME — show everything ──
+    if user == "free_time":
+        # Break show_now streaks to avoid spam penalty
+        if show_streak >= 3:
+            return "delay"
         return "show_now"
 
-    # PRIORITY 2: DURING STUDY/SLEEP → PROTECT FOCUS
-    if state.user_state in ["studying", "sleeping"]:
-        if state.notification_type == "social":
-            return "mute"
-        if state.notification_type == "work":
-            return "delay"
+    # ── PRIORITY 4: URGENT fallback (unknown states) ──
+    if notif == "urgent":
+        return "show_now"
 
-    # PRIORITY 3: FREE TIME BEHAVIOR
-    if state.user_state == "free_time":
-        if state.notification_type == "social":
-            # If too many socials already shown → avoid spam
-            if social_count >= 2:
-                return "delay"
-            return "show_now"
-
-        if state.notification_type == "work":
-            return "show_now"
-
-    # PRIORITY 4: SMART ADJUSTMENT USING HISTORY
-    # If too many urgent already handled → allow delay sometimes
-    if urgent_count >= 2 and state.notification_type == "work":
-        return "delay"
+    # ── PRIORITY 5: HISTORY-BASED ADJUSTMENT ──
+    # Break delay streaks to avoid stagnation penalty
+    if delay_streak >= 3 and notif != "social":
+        return "show_now"
 
     return "delay"
 
