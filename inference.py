@@ -73,27 +73,24 @@ show_now OR delay OR mute
         return "delay"
 
 def rule_based_action(state):
-    recent = state.history if hasattr(state, "history") and state.history else []
     user = state.user_state
     notif = state.notification_type
 
-    # ── PRIORITY 1: URGENT — always show (no exceptions) ──
-    if notif == "urgent":
-        return "show_now"
-
-    # ── PRIORITY 2: SLEEPING — delay everything non-urgent ──
+    # ── PRIORITY 1: SLEEPING — always delay (protect sleep, even for urgent) ──
     if user == "sleeping":
         return "delay"
 
-    # ── PRIORITY 3: STUDYING — protect focus ──
+    # ── PRIORITY 2: STUDYING — protect focus ──
     if user == "studying":
         if notif == "social":
             return "mute"
+        elif notif == "urgent":
+            return "show_now"
         elif notif == "work":
             return "delay"
         return "delay"
 
-    # ── PRIORITY 4: FREE TIME — show everything ──
+    # ── PRIORITY 3: FREE TIME — always show ──
     if user == "free_time":
         return "show_now"
 
