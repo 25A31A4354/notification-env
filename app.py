@@ -37,32 +37,44 @@ def reset():
 async def step(request: Request):
     """Take a step — accepts action via JSON body or query param. Crash-safe."""
     try:
-        data = await request.json()
-    except Exception:
-        data = {}
+        # Parse body safely
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
 
-    action = data.get("action") if isinstance(data, dict) else None
+        action = data.get("action") if isinstance(data, dict) else None
 
-    if action is None:
-        action = request.query_params.get("action")
+        # Fall back to query param
+        if action is None:
+            action = request.query_params.get("action")
 
-    if action is None:
-        return {"error": "action is required"}
+        if action is None:
+            return {"error": "action is required"}
 
-    if action not in VALID_ACTIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid action '{action}'. Must be one of: {sorted(VALID_ACTIONS)}"
-        )
+        print("Received action:", action)
 
-    state, reward, done, _ = env.step(action)
-    return {
-        "user_state": state.user_state,
-        "notification_type": state.notification_type,
-        "history": state.history,
-        "reward": reward,
-        "done": done
-    }
+        # Auto-reset if env was never initialized
+        if env.current_state is None:
+            print("WARNING: env not initialized — auto-resetting")
+            env.reset()
+
+        state, reward, done, _ = env.step(action)
+
+        return {
+            "user_state": state.user_state,
+            "notification_type": state.notification_type,
+            "history": state.history,
+            "reward": reward,
+            "done": done
+        }
+
+    except Exception as e:
+        print("ERROR in /step:", str(e))
+        return {
+            "error": "internal failure",
+            "details": str(e)
+        }
 
 
 @app.get("/state")
