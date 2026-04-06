@@ -4,8 +4,7 @@ OpenEnv API Server — Smart Notification Manager AI
 Exposes /reset, /step, and /state endpoints for OpenEnv validator compliance.
 """
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request
 from env import NotificationEnv
 
 app = FastAPI(
@@ -17,8 +16,7 @@ app = FastAPI(
 env = NotificationEnv()
 
 
-class StepRequest(BaseModel):
-    action: str
+
 
 
 VALID_ACTIONS = {"show_now", "delay", "mute"}
@@ -36,15 +34,27 @@ def reset():
 
 
 @app.post("/step")
-def step(request: StepRequest):
-    """Take a step in the environment with the given action."""
-    if request.action not in VALID_ACTIONS:
+async def step(request: Request):
+    """Take a step — accepts action via JSON body or query param."""
+    data = {}
+    if request.headers.get("content-type") == "application/json":
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+
+    action = data.get("action") or request.query_params.get("action")
+
+    if action is None:
+        return {"error": "action is required"}
+
+    if action not in VALID_ACTIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid action '{request.action}'. Must be one of: {sorted(VALID_ACTIONS)}"
+            detail=f"Invalid action '{action}'. Must be one of: {sorted(VALID_ACTIONS)}"
         )
 
-    state, reward, done, _ = env.step(request.action)
+    state, reward, done, _ = env.step(action)
     return {
         "user_state": state.user_state,
         "notification_type": state.notification_type,
