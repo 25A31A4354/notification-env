@@ -79,11 +79,13 @@ def rule_based_action(state):
 
     # Count recent action patterns
     recent_actions = [str(h).split(":")[-1] if ":" in str(h) else str(h) for h in recent]
-    delay_streak = sum(1 for a in recent_actions[-3:] if a == "delay")
-    show_streak = sum(1 for a in recent_actions[-3:] if a == "show_now")
+    delay_streak = sum(1 for a in recent_actions[-2:] if a == "delay")
+    show_streak = sum(1 for a in recent_actions[-2:] if a == "show_now")
 
-    # ── PRIORITY 1: SLEEPING — always delay (protect sleep) ──
+    # ── PRIORITY 1: SLEEPING ──
     if user == "sleeping":
+        if notif == "urgent":
+            return "show_now"  # emergencies override sleep
         return "delay"
 
     # ── PRIORITY 2: STUDYING — protect focus ──
@@ -99,7 +101,7 @@ def rule_based_action(state):
     # ── PRIORITY 3: FREE TIME — show everything ──
     if user == "free_time":
         # Break show_now streaks to avoid spam penalty
-        if show_streak >= 3:
+        if show_streak >= 2:
             return "delay"
         return "show_now"
 
@@ -109,7 +111,7 @@ def rule_based_action(state):
 
     # ── PRIORITY 5: HISTORY-BASED ADJUSTMENT ──
     # Break delay streaks to avoid stagnation penalty
-    if delay_streak >= 3 and notif != "social":
+    if delay_streak >= 2 and notif != "social":
         return "show_now"
 
     return "delay"
