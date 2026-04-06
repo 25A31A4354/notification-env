@@ -22,6 +22,15 @@ env = NotificationEnv()
 VALID_ACTIONS = {"show_now", "delay", "mute"}
 
 
+@app.get("/")
+def home():
+    """Root endpoint — confirms the API is running."""
+    return {
+        "message": "Smart Notification Manager API is running",
+        "endpoints": ["/reset", "/step", "/state", "/health", "/docs"]
+    }
+
+
 @app.post("/reset")
 def reset():
     """Reset the environment and return the initial state."""
