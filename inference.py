@@ -16,7 +16,9 @@ client = OpenAI(
 
 def decide_action(state):
     history = state.history if hasattr(state, "history") and state.history else []
-    
+
+    print("STATE:", state.user_state, state.notification_type)
+
     prompt = f"""
 You are an intelligent notification manager.
 
@@ -51,12 +53,36 @@ show_now OR delay OR mute
         temperature=0
     )
 
-    action = response.choices[0].message.content.strip().lower()
+    print("RAW RESPONSE:", response)
 
-    if action not in ["show_now", "delay", "mute"]:
+    content = response.choices[0].message.content
+
+    if content is None:
         return "delay"
 
-    return action
+    action = content.strip().lower()
+
+    if "show" in action:
+        return "show_now"
+    elif "mute" in action:
+        return "mute"
+    elif "delay" in action:
+        return "delay"
+    else:
+        print("INVALID ACTION FROM MODEL:", action)
+        return "delay"
+
+def rule_based_action(state):
+    if state.user_state in ["studying", "sleeping"]:
+        if state.notification_type == "social":
+            return "mute"
+        elif state.notification_type == "work":
+            return "delay"
+        elif state.notification_type == "urgent":
+            return "show_now"
+    elif state.user_state == "free_time":
+        return "show_now"
+    return "delay"
 
 def run_env():
     output = ""
@@ -73,8 +99,12 @@ def run_env():
         for step in range(task["steps"]):
             try:
                 action = decide_action(state)
-            except Exception:
-                action = "delay"
+            except Exception as e:
+                print("API FAILED:", e)
+                action = rule_based_action(state)
+
+            if action not in ["show_now", "delay", "mute"]:
+                action = rule_based_action(state)
 
             output += f"[STEP] {step} | State: {state} | Action: {action}\n"
 
