@@ -6,15 +6,9 @@ from tasks import TASKS
 def simple_agent(state):
     user = state.user_state
     notif = state.notification_type
-    history = state.history if hasattr(state, "history") and state.history else []
 
-    # ── 1. SAFETY RULES (highest priority — checked first AND last) ──
-    # These constraints are absolute and cannot be violated.
-
-    # ── 2. USER STATE LOGIC ──
-    if user == "free_time":
-        action = "show_now"
-    elif user == "studying":
+    # ── 1. USER STATE RULES ──
+    if user == "studying":
         if notif == "social":
             action = "mute"
         elif notif == "work":
@@ -24,31 +18,15 @@ def simple_agent(state):
         else:
             action = "delay"
     elif user == "sleeping":
-        action = "delay"  # ALL notifications delayed while sleeping
+        action = "delay"
+    elif user == "free_time":
+        action = "show_now"
     else:
-        action = "delay"  # safe fallback
+        action = "delay"
 
-    # ── 3. URGENT OVERRIDE (smart) ──
-    if notif == "urgent":
-        if user == "sleeping":
-            action = "delay"
-        else:
-            action = "show_now"
-
-    # ── 4. HISTORY ADJUSTMENT (lowest priority) ──
-    # Only for non-critical situations to avoid spam/stagnation penalties.
-    last_actions = history[-2:]
-    if len(last_actions) == 2 and user != "studying" and notif != "urgent":
-        if last_actions.count("show_now") == 2:
-            action = "delay"    # avoid spam penalty
-        elif last_actions.count("delay") == 2:
-            action = "show_now"  # avoid stagnation
-
-    # ── SAFETY ENFORCEMENT (final guardrails) ──
-    # Never mute urgent
+    # ── 2. SAFETY RULES ──
     if notif == "urgent" and action == "mute":
         action = "delay"
-    # Never show social during studying
     if user == "studying" and notif == "social" and action == "show_now":
         action = "mute"
 
