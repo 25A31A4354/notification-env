@@ -73,15 +73,39 @@ show_now OR delay OR mute
         return "delay"
 
 def rule_based_action(state):
+    recent = state.history if hasattr(state, "history") and state.history else []
+
+    # Count patterns
+    urgent_count = sum(1 for h in recent if "urgent:show_now" in str(h))
+    social_count = sum(1 for h in recent if "social:show_now" in str(h))
+
+    # PRIORITY 1: URGENT ALWAYS IMPORTANT
+    if state.notification_type == "urgent":
+        return "show_now"
+
+    # PRIORITY 2: DURING STUDY/SLEEP → PROTECT FOCUS
     if state.user_state in ["studying", "sleeping"]:
         if state.notification_type == "social":
             return "mute"
-        elif state.notification_type == "work":
+        if state.notification_type == "work":
             return "delay"
-        elif state.notification_type == "urgent":
+
+    # PRIORITY 3: FREE TIME BEHAVIOR
+    if state.user_state == "free_time":
+        if state.notification_type == "social":
+            # If too many socials already shown → avoid spam
+            if social_count >= 2:
+                return "delay"
             return "show_now"
-    elif state.user_state == "free_time":
-        return "show_now"
+
+        if state.notification_type == "work":
+            return "show_now"
+
+    # PRIORITY 4: SMART ADJUSTMENT USING HISTORY
+    # If too many urgent already handled → allow delay sometimes
+    if urgent_count >= 2 and state.notification_type == "work":
+        return "delay"
+
     return "delay"
 
 def run_env():
@@ -97,14 +121,7 @@ def run_env():
         output += f"\n[START] Task: {task['name']}\n"
 
         for step in range(task["steps"]):
-            try:
-                action = decide_action(state)
-            except Exception as e:
-                print("API FAILED:", e)
-                action = rule_based_action(state)
-
-            if action not in ["show_now", "delay", "mute"]:
-                action = rule_based_action(state)
+            action = rule_based_action(state)
 
             output += f"[STEP] {step} | State: {state} | Action: {action}\n"
 
