@@ -35,15 +35,16 @@ def reset():
 
 @app.post("/step")
 async def step(request: Request):
-    """Take a step — accepts action via JSON body or query param."""
-    data = {}
-    if request.headers.get("content-type") == "application/json":
-        try:
-            data = await request.json()
-        except Exception:
-            data = {}
+    """Take a step — accepts action via JSON body or query param. Crash-safe."""
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
 
-    action = data.get("action") or request.query_params.get("action")
+    action = data.get("action") if isinstance(data, dict) else None
+
+    if action is None:
+        action = request.query_params.get("action")
 
     if action is None:
         return {"error": "action is required"}
