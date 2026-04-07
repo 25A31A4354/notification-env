@@ -2,5 +2,5 @@ fastapi
 uvicorn[standard]
 pydantic
 openenv-core
-openai
+openai>=1.0.0
 gradio
