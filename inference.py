@@ -1,11 +1,20 @@
 from fastapi import FastAPI
-import uvicorn
+from env import NotificationEnv
 
+env = NotificationEnv()
 app = FastAPI()
 
 @app.post("/reset")
 def reset():
-    return {"status": "reset successful"}
+    obs = env.reset()
+    # FastAPI automatically serializes Pydantic models (like state/obs) to JSON
+    return obs
 
-if __name__ == "__main__":
-    uvicorn.run("inference:app", host="0.0.0.0", port=8000)
+@app.post("/step")
+def step(action: str):
+    obs, reward, done, info = env.step(action)
+    return {
+        "observation": obs,
+        "reward": reward,
+        "done": done
+    }
