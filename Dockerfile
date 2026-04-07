@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 # Set working directory
 WORKDIR /app
@@ -10,8 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application
 COPY . .
 
-# Expose port for Gradio / FastAPI
-EXPOSE 7860
+# Expose port for FastAPI
+EXPOSE 8000
 
-# Start the FastAPI server (OpenEnv grader calls /reset and /step)
-CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
+# Start the FastAPI server
+CMD ["uvicorn", "inference:app", "--host", "0.0.0.0", "--port", "8000"]

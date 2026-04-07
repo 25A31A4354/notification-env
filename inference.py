@@ -18,11 +18,12 @@ Reward Table (from env.py):
 
 import os
 import logging
-import gradio as gr
 from openai import OpenAI
 from env import NotificationEnv
 from grader import grade
 from tasks import TASKS
+from fastapi import FastAPI
+import uvicorn
 
 # ─── Logging ────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -186,18 +187,12 @@ def run_env() -> str:
 
     return output
 
-# ─── Gradio UI ────────────────────────────────────────────────────────────────
-demo = gr.Interface(
-    fn=run_env,
-    inputs=[],
-    outputs="text",
-    title="Smart Notification Manager AI",
-    description=(
-        "OpenEnv Hackathon — LLM-powered notification agent. "
-        "Uses Llama-3.1-8B via Hugging Face Inference API when HF_TOKEN is set; "
-        "falls back to optimal deterministic agent otherwise."
-    )
-)
+# ─── FastAPI Server ───────────────────────────────────────────────────────────
+app = FastAPI(title="Smart Notification Manager AI")
+
+@app.post("/reset")
+def reset():
+    return {"status": "reset successful"}
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    uvicorn.run("inference:app", host="0.0.0.0", port=8000)
