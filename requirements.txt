@@ -1,6 +1,2 @@
 fastapi
-uvicorn[standard]
-pydantic
-openenv-core
-openai>=1.0.0
-gradio
+uvicorn
