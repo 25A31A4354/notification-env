@@ -1,23 +1,10 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
-
 [project]
 name = "notification-env"
-version = "0.2.0"
-description = "Smart Notification Manager — OpenEnv Hackathon Environment"
-requires-python = ">=3.10"
-authors = [
-  { name = "Varshith", email = "varshithn@example.com" }
-]
+version = "0.1.0"
 dependencies = [
-  "fastapi",
-  "uvicorn[standard]",
-  "pydantic",
-  "openai>=1.0.0",
-  "gradio",
-  "openenv-core",
+    "fastapi",
+    "uvicorn"
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
+[project.scripts]
+server = "server.app:app"
