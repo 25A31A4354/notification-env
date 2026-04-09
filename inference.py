@@ -129,4 +129,6 @@ def run_evaluation():
                 
         print(f"[END] task={task_name} score={score} steps={total_steps}", flush=True)
 
-run_evaluation()
+@app.on_event("startup")
+def startup_event():
+    run_evaluation()
