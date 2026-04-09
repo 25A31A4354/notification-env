@@ -94,3 +94,39 @@ async def step(request: Request):
         "reward": reward,
         "done": done
     }
+
+has_run = False
+
+def run_evaluation():
+    global has_run
+    if has_run:
+        return
+    has_run = True
+
+    import random
+    from tasks import TASKS
+    
+    # Ensure deterministic execution
+    random.seed(42)
+
+    for task in TASKS:
+        task_name = task["name"]
+        total_steps = task["steps"]
+        
+        print(f"[START] task={task_name}", flush=True)
+        
+        obs = env.reset()
+        score = 0
+        
+        for step_num in range(1, total_steps + 1):
+            action = get_smart_action(obs)
+            obs, reward, done, _ = env.step(action)
+            score += reward
+            print(f"[STEP] step={step_num} reward={reward}", flush=True)
+            
+            if done and step_num < total_steps:
+                break
+                
+        print(f"[END] task={task_name} score={score} steps={total_steps}", flush=True)
+
+run_evaluation()
