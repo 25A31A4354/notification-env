@@ -124,11 +124,14 @@ def run_evaluation():
             score += reward
             print(f"[STEP] step={step_num} reward={reward}", flush=True)
             
-            if done and step_num < total_steps:
+            if done:
                 break
                 
-        print(f"[END] task={task_name} score={score} steps={total_steps}", flush=True)
+        print(f"[END] task={task_name} score={score} steps={step_num}", flush=True)
 
 @app.on_event("startup")
 def startup_event():
+    run_evaluation()
+
+if __name__ == "__main__":
     run_evaluation()
