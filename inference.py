@@ -1,4 +1,6 @@
+import os
 from fastapi import FastAPI, Request
+from openai import OpenAI
 from env import NotificationEnv
 
 env = NotificationEnv()
@@ -9,54 +11,48 @@ def get_smart_action(state):
     notif = state.notification_type
     history = state.history
 
-    # Parse history to count recent actions
-    actions = [h.split(":")[1] for h in history if ":" in h]
-    delays = actions.count("delay")
-    mutes = actions.count("mute")
-
-    # 1. Studying
-    if user == "studying":
-        # Rule 5: NEVER mute urgent
-        if notif == "urgent":
-            return "show_now"
-        # Rule 5: NEVER show social during studying
-        elif notif == "social":
-            return "mute"
-        elif notif == "work":
-            # Rule 1: If repeated delays -> eventually show_now
-            if delays >= 2:
-                return "show_now"
-            return "delay"
-
-    # 2. Sleeping
-    elif user == "sleeping":
-        if notif == "urgent":
-            return "show_now" # urgent -> show_now
-        elif notif == "work":
-            return "delay"    # work -> delay
-        elif notif == "social":
-            # Avoid excessive muting
-            if mutes >= 2:
-                return "delay"
-            return "mute"     # social -> mute
-
-    # 3. Free Time
-    elif user == "free_time":
-        if notif == "urgent":
-            return "show_now" # urgent -> show_now
-        elif notif == "work":
-            # work -> show_now or delay
-            if delays >= 1:
-                return "show_now"
-            return "delay"
-        elif notif == "social":
-            # social -> sometimes delay
-            if len(actions) > 0 and actions[-1] == "show_now":
-                return "delay"
-            return "show_now"
-
-    # 4. Fallback safe choice (minimize penalty)
-    return "delay"
+    try:
+        client = OpenAI(
+            base_url=os.environ["API_BASE_URL"],
+            api_key=os.environ["API_KEY"]
+        )
+        
+        prompt = f"""
+        You are an intelligent notification management agent.
+        Choose exactly one action from: ["show_now", "delay", "mute"].
+        
+        Current user state: {user}
+        Incoming notification type: {notif}
+        Recent notification history: {list(history)}
+        
+        Rules:
+        - When studying, NEVER mute urgent notifications (show_now).
+        - When studying, NEVER show social notifications (mute).
+        - When studying, for work notifications, delay unless repeated delays happen, then show_now.
+        - When sleeping, urgent -> show_now, work -> delay, social -> mute.
+        - When in free_time, urgent -> show_now, work -> delay/show_now, social -> show_now.
+        
+        Respond ONLY with the exact string of your chosen action. No other text.
+        """
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a precise notification management API. Select one of 'show_now', 'delay', 'mute'."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.0,
+            max_tokens=10
+        )
+        
+        action = response.choices[0].message.content.strip().lower()
+        if "show_now" in action: return "show_now"
+        if "mute" in action: return "mute"
+        if "delay" in action: return "delay"
+        return "delay"
+    except Exception as e:
+        print(f"LLM API Error: {e}", flush=True)
+        return "delay"
 
 
 @app.post("/reset")
