@@ -112,17 +112,36 @@ def run_evaluation():
         print(f"[START] task={task_name}", flush=True)
         
         obs = env.reset()
-        score = 0
+        total_reward = 0
+        max_possible_reward = 0
         
         for step_num in range(1, total_steps + 1):
+            u = obs.user_state
+            n = obs.notification_type
+            if u == "studying":
+                if n == "social": mr = 10
+                elif n == "work": mr = 6
+                elif n == "urgent": mr = 10
+                else: mr = 10
+            elif u == "sleeping": mr = 5
+            elif u == "free_time": mr = 5
+            else: mr = 10
+            max_possible_reward += mr
+
             action = get_smart_action(obs)
             obs, reward, done, _ = env.step(action)
-            score += reward
+            total_reward += reward
             print(f"[STEP] step={step_num} reward={reward}", flush=True)
             
             if done:
                 break
                 
+        if max_possible_reward == 0:
+            score = 0.01
+        else:
+            score = total_reward / max_possible_reward
+            score = max(0.01, min(score, 0.99))
+            
         print(f"[END] task={task_name} score={score} steps={step_num}", flush=True)
 
 @app.on_event("startup")
